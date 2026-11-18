@@ -1,0 +1,27 @@
+
+# Maven build files
+target/
+*.class
+
+# Logs
+*.log
+logs/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Environment variables and secrets
+.env
+.env.*
+application-local.yml
+application-local.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak

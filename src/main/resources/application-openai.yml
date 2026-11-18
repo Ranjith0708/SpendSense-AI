@@ -1,0 +1,3 @@
+# Activate with: --spring.profiles.active=openai   (also set OPENAI_API_KEY)
+llm:
+  provider: openai
