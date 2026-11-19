@@ -32,9 +32,13 @@ class LlmClientFactoryTest {
         assertEquals(LlmProvider.LOCAL, factory(props("local", "")).active().provider());
     }
 
-    @Test void openAiProviderIsSelectedWithKeyAndAcceptsDevAlias() {
+    @Test void openAiProviderIsSelectedWithKeyAndIgnoresCase() {
         assertEquals(LlmProvider.OPENAI, factory(props("openai", "sk-test")).active().provider());
-        assertEquals(LlmProvider.OPENAI, factory(props("dev", "sk-test")).active().provider());
+        assertEquals(LlmProvider.OPENAI, factory(props(" OpenAI ", "sk-test")).active().provider());
+    }
+
+    @Test void retiredAliasesAreRejected() {
+        assertThrows(IllegalStateException.class, () -> factory(props("dev", "sk-test")));
     }
 
     @Test void openAiWithoutKeyFailsAtStartup() {

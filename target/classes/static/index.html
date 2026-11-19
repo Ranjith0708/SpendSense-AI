@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SpendSense AI – see where your money goes</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="appbar">
+  <div class="appbar-in">
+    <a class="brand" href="/" aria-label="SpendSense AI home">
+      <span class="logo" aria-hidden="true">SA</span>
+      <span class="brand-text"><span class="brand-name">SpendSense AI</span><span class="brand-tag">Know where your money goes</span></span>
+    </a>
+    <div id="fileChip" class="chip" hidden>
+      <span id="chipName"></span>
+      <button id="newBtn" type="button" class="link">Analyze another statement</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card upload" id="uploadCard">
+    <h1 class="page-title">Analyze your statement</h1>
+    <p class="lead">Works with PhonePe, GPay, Paytm and most bank statements.</p>
+    <label class="drop" id="dropZone" tabindex="0">
+      <input type="file" id="fileInput" accept=".pdf,.csv,.xlsx,.xls" hidden>
+      <strong>Drop your statement here or choose a file</strong>
+      <span>PDF, CSV or Excel, up to 20 MB</span>
+      <em id="fileName"></em>
+    </label>
+    <div class="row">
+      <input type="password" id="pdfPassword" placeholder="PDF password (only if protected)" autocomplete="off">
+      <button id="analyzeBtn" class="primary" disabled>Analyze statement</button>
+    </div>
+    <p id="error" class="error" role="alert" hidden></p>
+  </section>
+
+  <div id="results" hidden>
+    <div id="warnings" class="notice" role="status" hidden><strong>Heads up</strong><ul id="warningList"></ul></div>
+
+    <div class="tabrow">
+      <nav class="tabbar" role="tablist" aria-label="Analysis sections" id="tabbar">
+        <button role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-tab="overview">Overview</button>
+        <button role="tab" id="tab-transactions" aria-controls="panel-transactions" aria-selected="false" tabindex="-1" data-tab="transactions">Transactions <span id="txnBadge" class="badge"></span></button>
+        <button role="tab" id="tab-insights" aria-controls="panel-insights" aria-selected="false" tabindex="-1" data-tab="insights">Insights</button>
+      </nav>
+      <button id="downloadBtn" type="button" class="primary dl">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+        <span id="dlLabel">Download PDF report</span>
+      </button>
+    </div>
+    <p id="dlMsg" class="error" role="alert" hidden></p>
+
+    <section id="panel-overview" class="panel" role="tabpanel" aria-labelledby="tab-overview">
+      <div class="kpis">
+        <div class="card kpi"><span>Total spent</span><b id="kpiSpent"></b></div>
+        <div class="card kpi"><span>Total credits</span><b id="kpiCredits"></b><small id="kpiNet"></small></div>
+        <div class="card kpi"><span>Top category</span><b id="kpiTop"></b><small id="kpiTopAmt"></small></div>
+        <div class="card kpi"><span>Uncategorized</span><b id="kpiOther"></b><small>payments to review</small></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h2>Where the money went</h2><div class="chartbox"><canvas id="chart"></canvas></div></div>
+        <div class="card"><h2>Category breakdown</h2><p class="hint">Select a category to see its transactions.</p><ul id="breakdown" class="breakdown"></ul></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h2>Top payees</h2><ol id="topPayees" class="ranked"></ol></div>
+        <div class="card"><h2>Largest payments</h2><ol id="topPayments" class="ranked"></ol></div>
+      </div>
+    </section>
+
+    <section id="panel-transactions" class="panel" role="tabpanel" aria-labelledby="tab-transactions" hidden>
+      <div class="card">
+        <div class="tablehead">
+          <h2>Transactions <span id="count"></span></h2>
+          <div class="filters">
+            <input type="search" id="search" placeholder="Search payee or UTR" aria-label="Search payee or UTR">
+            <select id="catFilter" aria-label="Category"><option value="">All categories</option></select>
+            <select id="typeFilter" aria-label="Type"><option value="">Debits and credits</option><option>DEBIT</option><option>CREDIT</option></select>
+            <button id="clearFilters" type="button" class="secondary small">Clear</button>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Date</th><th>Payee / details</th><th>UTR</th><th class="num">Amount</th><th>Type</th><th>Category</th></tr></thead>
+            <tbody id="txnBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-insights" class="panel" role="tabpanel" aria-labelledby="tab-insights" hidden>
+      <div class="card"><h2>Summary <span id="autoTag" class="tag" hidden>Generated from your totals</span></h2><p id="summary" class="summary"></p></div>
+      <div class="grid3">
+        <div class="card"><h2>Insights</h2><ul id="insights" class="bullets"></ul></div>
+        <div class="card"><h2>Feedback</h2><ul id="feedback" class="bullets"></ul></div>
+        <div class="card accent"><h2>Ways to save</h2><ul id="tips" class="bullets"></ul></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">SpendSense AI &middot; Insights are estimates generated from your statement</footer>
+
+<div id="overlay" class="overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="progressLabel">
+    <h2 id="progressLabel">Analyzing your statement</h2>
+    <p class="sub">This can take a few minutes. Please keep this page open.</p>
+    <div class="progress-head">
+      <span class="status blink"><span id="progressText">Getting started</span><span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></span>
+      <b id="progressPct">0%</b>
+    </div>
+    <div class="bar" role="progressbar" aria-labelledby="progressLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="barFill" class="bar-fill"></div></div>
+    <button id="cancelBtn" class="secondary" type="button">Cancel</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="js/vendor/jspdf.umd.min.js"></script>
+<script src="js/vendor/jspdf.plugin.autotable.min.js"></script>
+<script src="js/report.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

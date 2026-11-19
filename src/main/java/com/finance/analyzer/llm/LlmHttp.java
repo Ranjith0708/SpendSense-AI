@@ -1,21 +1,9 @@
 package com.finance.analyzer.llm;
 
-import java.net.http.HttpClient;
-import java.time.Duration;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
-import org.springframework.web.client.RestClient;
-
-/** Shared construction of {@link RestClient} instances with sane timeouts. */
+/** Small helpers shared by the LLM clients. */
 final class LlmHttp {
 
     private LlmHttp() {}
-
-    static RestClient restClient(String baseUrl, int readTimeoutSeconds) {
-        HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(http);
-        factory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
-        return RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
-    }
 
     static String stripTrailingSlash(String url) {
         return url != null && url.endsWith("/") ? url.substring(0, url.length() - 1) : url;

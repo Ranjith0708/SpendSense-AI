@@ -1,0 +1,16 @@
+com\finance\analyzer\llm\OpenAiLlmClientTest$Req.class
+com\finance\analyzer\llm\OllamaLlmClientTest.class
+com\finance\analyzer\service\CategoryRulesTest.class
+com\finance\analyzer\service\StatementChunkingTest.class
+com\finance\analyzer\llm\OpenAiLlmClientTest.class
+com\finance\analyzer\llm\OllamaLlmClientTest$Script.class
+com\finance\analyzer\service\FinanceAiServiceTest.class
+com\finance\analyzer\llm\LlmClientFactoryTest$1.class
+com\finance\analyzer\service\StructuredLlmServiceTest.class
+com\finance\analyzer\service\FinanceAiServiceTest$1.class
+com\finance\analyzer\llm\OpenAiLlmClientTest$Reply.class
+com\finance\analyzer\llm\LlmClientFactoryTest.class
+com\finance\analyzer\service\ProgressTrackerTest.class
+com\finance\analyzer\service\TransactionAccumulatorTest.class
+com\finance\analyzer\service\StructuredLlmServiceTest$Recorder.class
+com\finance\analyzer\service\LocalInsightsTest.class

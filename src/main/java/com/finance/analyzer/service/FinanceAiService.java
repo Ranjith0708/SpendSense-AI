@@ -36,6 +36,11 @@ public class FinanceAiService {
     /** Safe to show to users; the technical reason is always logged instead. */
     static final String GENERIC_FAILURE = "We couldn't analyze this statement right now. Please try again in a moment.";
 
+    /** Limits for the closing narrative call only (chunk calls keep the configured limits). */
+    private static final int NARRATIVE_ATTEMPTS = 1;
+    private static final int NARRATIVE_MAX_OUTPUT_TOKENS = 1024;
+    private static final int NARRATIVE_TIMEOUT_SECONDS = 180;
+
     private final ChunkProcessor chunkProcessor;
     private final StructuredLlmService llm;
     private final AnalyzerProperties props;
@@ -185,7 +190,10 @@ public class FinanceAiService {
         if (recurring.isEmpty()) sb.append("- none\n"); else recurring.forEach(r -> sb.append("- ").append(r).append('\n'));
         // Small models often answer in a slightly different shape (objects inside lists, a string instead of a list),
         // so read the reply as a tree and coerce each field instead of failing on a strict mapping.
-        JsonNode root = llm.call(Prompts.ADVISE, sb.toString(), JsonNode.class, "narrative");
+        // The narrative is a short reply, so it gets its own tight limits: a bounded reply length and time, and a single
+        // attempt (retrying a timed-out call just repeats the same wait). On failure the caller falls back to local insights.
+        JsonNode root = llm.call(Prompts.ADVISE, sb.toString(), JsonNode.class, "narrative",
+                NARRATIVE_ATTEMPTS, NARRATIVE_MAX_OUTPUT_TOKENS, NARRATIVE_TIMEOUT_SECONDS);
         return new Narrative(text(field(root, "summary")), list(field(root, "insights")),
                 list(field(root, "feedback")), list(field(root, "savingsTips", "savings_tips", "tips")));
     }

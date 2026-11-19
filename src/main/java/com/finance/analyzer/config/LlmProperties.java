@@ -6,15 +6,14 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /**
  * Binds the {@code llm.*} block of application.yml.
  *
- * @param provider       active provider: {@code local} (Ollama / CodeLlama) or {@code openai}
- *                       ({@code dev} and {@code cloud} are accepted aliases for {@code openai})
+ * @param provider       active provider: {@code openai} (default) or {@code local} (Ollama)
  * @param timeoutSeconds read timeout for a single LLM call
  * @param local          settings for the local Ollama endpoint
  * @param openai         settings for the OpenAI (or any OpenAI-compatible) endpoint
  */
 @ConfigurationProperties(prefix = "llm")
 public record LlmProperties(
-        @DefaultValue("local") String provider,
+        @DefaultValue("openai") String provider,
         @DefaultValue("180") int timeoutSeconds,
         @DefaultValue Endpoint local,
         @DefaultValue Endpoint openai) {

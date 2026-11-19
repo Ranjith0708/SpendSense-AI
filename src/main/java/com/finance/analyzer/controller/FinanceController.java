@@ -31,11 +31,16 @@ public class FinanceController {
     private final FinanceAiService ai;
     private final AnalysisJobService jobs;
 
+    /** Strips line breaks and other control characters from user-supplied values before they are logged. */
+    static String safe(String s) {
+        return s == null ? "" : s.replaceAll("\\p{Cntrl}", "_");
+    }
+
     /** Blocking analysis: returns the final result when every chunk is done. Kept for API compatibility. */
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AnalysisResponse> analyze(@RequestParam("file") MultipartFile file,
                                                     @RequestParam(value = "password", required = false) String password) {
-        log.info("api_invoked POST /api/finance/analyze file={} sizeBytes={}", file.getOriginalFilename(), file.getSize());
+        log.info("api_invoked POST /api/finance/analyze file={} sizeBytes={}", safe(file.getOriginalFilename()), file.getSize());
         List<StatementChunk> chunks = parser.parse(file, password);
         return ResponseEntity.ok(ai.analyze("sync-" + UUID.randomUUID().toString().substring(0, 8), chunks, null));
     }
@@ -44,7 +49,7 @@ public class FinanceController {
     @PostMapping(value = "/analyze/async", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<JobAccepted> analyzeAsync(@RequestParam("file") MultipartFile file,
                                                     @RequestParam(value = "password", required = false) String password) {
-        log.info("api_invoked POST /api/finance/analyze/async file={} sizeBytes={}", file.getOriginalFilename(), file.getSize());
+        log.info("api_invoked POST /api/finance/analyze/async file={} sizeBytes={}", safe(file.getOriginalFilename()), file.getSize());
         // Parse before returning: the upload is discarded once this request ends, and parse errors map to 422 right away.
         List<StatementChunk> chunks = parser.parse(file, password);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(jobs.submit(chunks));
@@ -53,7 +58,7 @@ public class FinanceController {
     /** Server-Sent Events stream: {@code progress}, then {@code result} or {@code failure}. */
     @GetMapping(value = "/jobs/{jobId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<SseEmitter> events(@PathVariable String jobId) {
-        log.info("api_invoked GET /api/finance/jobs/{}/events", jobId);
+        log.info("api_invoked GET /api/finance/jobs/{}/events", safe(jobId));
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .header("X-Accel-Buffering", "no")
@@ -63,7 +68,7 @@ public class FinanceController {
     /** Cancels a running analysis. */
     @DeleteMapping("/jobs/{jobId}")
     public ResponseEntity<Void> cancel(@PathVariable String jobId) {
-        log.info("api_invoked DELETE /api/finance/jobs/{}", jobId);
+        log.info("api_invoked DELETE /api/finance/jobs/{}", safe(jobId));
         jobs.cancel(jobId);
         return ResponseEntity.noContent().build();
     }

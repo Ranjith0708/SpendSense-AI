@@ -22,7 +22,7 @@ public record AnalyzerProperties(
      * @param logPayloads log each chunk's prompt input and the model's raw/parsed output at INFO (otherwise DEBUG).
      *                    The payloads contain statement data, so switch off where logs are shared.
      */
-    public record Logging(@DefaultValue("true") boolean logPayloads) {}
+    public record Logging(@DefaultValue("false") boolean logPayloads) {}
 
     /**
      * @param concurrency       chunks processed in parallel (1 = strictly sequential, best for a local model)

@@ -53,7 +53,7 @@ public class StatementParserService {
     /** Extracts the statement text and splits it into sequentially numbered chunks of whole transaction records. */
     public List<StatementChunk> parse(MultipartFile file, String password) {
         if (file == null || file.isEmpty()) throw new StatementParseException("Please upload a non-empty file.");
-        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase().replaceAll("\\p{Cntrl}", "_");
         log.info("parse_start file={} sizeBytes={}", name, file.getSize());
         try {
             byte[] bytes = file.getBytes();
@@ -74,7 +74,8 @@ public class StatementParserService {
         } catch (StatementParseException e) {
             throw e;
         } catch (Exception e) {
-            throw new StatementParseException("Could not read the file: " + e.getMessage(), e);
+            log.warn("parse_failed file={} reason={}", name, e.toString());
+            throw new StatementParseException("Could not read the file. It may be corrupted or in an unsupported format.", e);
         }
     }
 

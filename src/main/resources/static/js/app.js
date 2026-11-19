@@ -11,7 +11,7 @@
     summary: ['Writing your summary', 'Finding ways to save', 'Putting it all together']
   };
 
-  let file = null, chart = null, txns = [], cats = {}, busy = false, es = null, jobId = null, runId = 0;
+  let file = null, chart = null, txns = [], cats = {}, lastResult = null, lastName = '', dlBusy = false, busy = false, es = null, jobId = null, runId = 0;
   let shown = 0, phase = 'chunks', msgIdx = 0, rampTimer = null, msgTimer = null, creepTick = 0;
 
   fetch('/api/finance/categories').then(r => r.json()).then(list => {
@@ -156,6 +156,8 @@
 
   function render(d, name) {
     txns = d.transactions || [];
+    lastResult = d; lastName = name || '';
+    $('dlMsg').hidden = true;
     $('uploadCard').hidden = true;
     $('chipName').textContent = name || 'Statement'; $('fileChip').hidden = false;
     $('results').hidden = false;
@@ -239,4 +241,22 @@
   }
   $('breakdown').addEventListener('click', e => openCategory(e.target.closest('li')));
   $('breakdown').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCategory(e.target.closest('li')); } });
+
+  // ---- PDF report -------------------------------------------------------------------------------------
+  $('downloadBtn').addEventListener('click', async () => {
+    if (!lastResult || dlBusy) return;
+    const btn = $('downloadBtn'), label = $('dlLabel').textContent;
+    dlBusy = true; btn.disabled = true; $('dlLabel').textContent = 'Preparing PDF...'; $('dlMsg').hidden = true;
+    await new Promise(r => setTimeout(r, 30));            // let the button repaint before the heavy work
+    try {
+      if (!window.jspdf || !window.SpendSenseReport) throw new Error('PDF library not loaded');
+      const doc = window.SpendSenseReport.build(window.jspdf.jsPDF, lastResult, { fileName: lastName, cleanName, isSpend, categories: cats });
+      doc.save(window.SpendSenseReport.fileName(lastName));
+    } catch (e) {
+      console.error('PDF export failed', e);
+      $('dlMsg').textContent = "We couldn't create the PDF. Please try again."; $('dlMsg').hidden = false;
+    } finally {
+      dlBusy = false; btn.disabled = false; $('dlLabel').textContent = label;
+    }
+  });
 })();

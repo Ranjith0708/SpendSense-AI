@@ -6,12 +6,12 @@ import java.util.Locale;
 public enum LlmProvider {
     LOCAL, OPENAI;
 
-    /** Accepts local/ollama/codellama and openai/dev/cloud (case-insensitive). */
+    /** Accepts {@code local} or {@code openai} (case-insensitive). */
     public static LlmProvider from(String value) {
         String v = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
         return switch (v) {
-            case "local", "ollama", "codellama" -> LOCAL;
-            case "openai", "dev", "cloud" -> OPENAI;
+            case "local" -> LOCAL;
+            case "openai" -> OPENAI;
             default -> throw new IllegalStateException(
                     "Unsupported llm.provider '" + value + "'. Use 'local' (Ollama/CodeLlama) or 'openai'.");
         };

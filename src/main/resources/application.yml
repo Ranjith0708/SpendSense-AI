@@ -7,13 +7,24 @@ spring:
       max-request-size: 20MB
 
 server:
-  port: 9090
+  port: ${PORT:9090}             # Azure App Service / Container Apps inject the port via env
+  shutdown: graceful
+  forward-headers-strategy: framework   # honour X-Forwarded-* from the Azure front end
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health          # only the health endpoint is exposed (/actuator/health for Azure probes)
+  endpoint:
+    health:
+      probes:
+        enabled: true            # /actuator/health/liveness and /readiness
 
 # ---------------------------------------------------------------------------
-# LLM provider. Switch with LLM_PROVIDER=openai (env var), -Dllm.provider=openai,
-# or the Spring profile `openai` (--spring.profiles.active=openai).
-#   local  -> Ollama running CodeLlama (no API key needed)
-#   openai -> OpenAI cloud API (needs OPENAI_API_KEY). `dev` and `cloud` are aliases.
+# LLM provider (default: openai; set LLM_PROVIDER=local for Ollama).
+#   openai -> OpenAI API (needs OPENAI_API_KEY)
+#   local  -> Ollama on this machine (no API key needed)
 # ---------------------------------------------------------------------------
 llm:
   provider: ${LLM_PROVIDER:local}
@@ -29,7 +40,7 @@ llm:
     base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
     api-key: ${OPENAI_API_KEY:}          # required when provider is openai
     model: ${OPENAI_MODEL:gpt-4o-mini}
-    temperature: 0.1                     # remove for models that only accept the default
+    temperature: 0.1                     # dropped automatically for models that only accept the default
 
 # ---------------------------------------------------------------------------
 # Chunked processing
@@ -45,7 +56,7 @@ analyzer:
     max-concurrent-jobs: 2       # analyses running at the same time
 
   logging:
-    log-payloads: true           # INFO-log each chunk's prompt input + raw/parsed model output (contains statement data)
+    log-payloads: ${LOG_PAYLOADS:false}   # INFO-log prompt input + raw/parsed model output. Contains statement data (PII): keep false outside local debugging
 
 logging:
   pattern:

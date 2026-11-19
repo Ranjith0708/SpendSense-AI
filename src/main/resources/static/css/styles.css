@@ -62,7 +62,9 @@ button.secondary.small:hover{border-color:var(--brand);color:var(--brand)}
 
 /* tabs */
 #results{display:block}
-.tabbar{position:sticky;top:0;z-index:5;display:flex;gap:4px;background:var(--bg);padding:8px 0;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.tabrow{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--bg);padding:8px 0;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.tabbar{display:flex;gap:4px;flex-wrap:wrap}
+.dl{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;font-size:14px}
 .tabbar button{font:600 14px "Public Sans",sans-serif;color:var(--muted);background:transparent;border:0;border-radius:8px;padding:9px 18px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
 .tabbar button:hover{background:#E7EEEC;color:var(--ink)}
 .tabbar button[aria-selected="true"]{background:var(--brand);color:var(--brand-ink)}

@@ -69,7 +69,10 @@ public class AnalysisJobService {
             return t;
         });
         // Comment lines keep proxies and browsers from closing an idle stream, and reveal clients that have gone away.
-        heartbeat.scheduleWithFixedDelay(() -> jobs.values().forEach(Job::heartbeat),
+        heartbeat.scheduleWithFixedDelay(() -> {
+                    jobs.values().forEach(Job::heartbeat);
+                    evictExpired();
+                },
                 HEARTBEAT_SECONDS, HEARTBEAT_SECONDS, TimeUnit.SECONDS);
     }
 
