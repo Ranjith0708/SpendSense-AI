@@ -47,7 +47,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class AnalysisJobService {
 
     private static final Duration RETENTION = Duration.ofMinutes(15);
-    /** 0 = the connection never times out; a run on a slow local model can take well over half an hour. */
+    /** 0 = the connection never times out; a long statement can take several minutes. */
     private static final long SSE_TIMEOUT_MS = 0L;
     private static final long HEARTBEAT_SECONDS = 15;
 
@@ -69,7 +69,10 @@ public class AnalysisJobService {
             return t;
         });
         // Comment lines keep proxies and browsers from closing an idle stream, and reveal clients that have gone away.
-        heartbeat.scheduleWithFixedDelay(() -> jobs.values().forEach(Job::heartbeat),
+        heartbeat.scheduleWithFixedDelay(() -> {
+                    jobs.values().forEach(Job::heartbeat);
+                    evictExpired();
+                },
                 HEARTBEAT_SECONDS, HEARTBEAT_SECONDS, TimeUnit.SECONDS);
     }
 

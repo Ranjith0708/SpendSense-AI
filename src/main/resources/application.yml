@@ -7,48 +7,43 @@ spring:
       max-request-size: 20MB
 
 server:
-  port: 9090
+  port: ${PORT:9090}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health          # /actuator/health
 
 # ---------------------------------------------------------------------------
-# LLM provider. Switch with LLM_PROVIDER=openai (env var), -Dllm.provider=openai,
-# or the Spring profile `openai` (--spring.profiles.active=openai).
-#   local  -> Ollama running CodeLlama (no API key needed)
-#   openai -> OpenAI cloud API (needs OPENAI_API_KEY). `dev` and `cloud` are aliases.
+# OpenAI
 # ---------------------------------------------------------------------------
 llm:
-  provider: ${LLM_PROVIDER:local}
-  timeout-seconds: 600           # cap for one whole LLM call; a CPU-only local model can need minutes for a big chunk
-  local:
-    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    api-key: ${OLLAMA_API_KEY:}          # optional; sent as a bearer token only when set
-    model: ${LOCAL_LLM_MODEL:llama3.2:1b}  # e.g. codellama:7b, or qwen2.5:3b (the previous default)
-    temperature: 0.1
-    context-length: 8192                 # Ollama num_ctx: prompt + reply must fit (Ollama's default is much smaller)
-    max-output-tokens: 4096              # Ollama num_predict: hard cap so a small model cannot ramble forever
+  timeout-seconds: 120           # cap for one OpenAI call
   openai:
     base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    api-key: ${OPENAI_API_KEY:}          # required when provider is openai
+    api-key: ${OPENAI_API_KEY:}  # required: the app refuses to start without it
     model: ${OPENAI_MODEL:gpt-4o-mini}
-    temperature: 0.1                     # remove for models that only accept the default
+    temperature: 0.1             # dropped automatically for models that only accept the default
 
 # ---------------------------------------------------------------------------
 # Chunked processing
 # ---------------------------------------------------------------------------
 analyzer:
   chunking:
-    transactions-per-chunk: 10   # N transaction records per LLM request (smaller = faster calls, finer progress)
+    transactions-per-chunk: 25   # N transaction records per OpenAI request
     max-chars-per-chunk: 8000    # hard cap on prompt size per chunk
   processing:
-    concurrency: 1               # chunks in flight at once (1 = sequential; keep 1 for a local model)
-    max-attempts: 2              # LLM attempts per call before a chunk is marked failed
-    min-interval-ms: 0           # rate limit: minimum gap between LLM call starts (0 = off)
+    concurrency: 2               # chunks in flight at once (raise carefully: OpenAI rate limits apply)
+    max-attempts: 3              # attempts per call before a chunk is marked failed
+    min-interval-ms: 0           # minimum gap between OpenAI call starts (0 = off)
     max-concurrent-jobs: 2       # analyses running at the same time
-
   logging:
-    log-payloads: true           # INFO-log each chunk's prompt input + raw/parsed model output (contains statement data)
+    log-payloads: ${LOG_PAYLOADS:false}   # INFO-log prompts and raw replies. Contains statement data (PII): keep false
 
 logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [job=%X{jobId:-}] [%X{chunkId:-}] %logger{24} - %msg%n"
   level:
-    com.finance: INFO            # INFO = flow milestones, DEBUG = prompts and raw LLM output (contains statement data)
+    com.finance: INFO

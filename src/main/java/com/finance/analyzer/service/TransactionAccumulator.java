@@ -23,7 +23,7 @@ final class TransactionAccumulator {
     void add(String chunkId, List<Transaction> incoming) {
         int accepted = 0, duplicates = 0, invalid = 0, corrected = 0;
         for (Transaction raw : incoming) {
-            if (raw == null || raw.amount() <= 0 || raw.type() == null) { invalid++; continue; }
+            if (raw == null || !(raw.amount() > 0) || Double.isInfinite(raw.amount()) || raw.type() == null) { invalid++; continue; }
             Transaction t = new Transaction(raw.date(), raw.details(), raw.utr() == null ? "" : raw.utr().trim(),
                     raw.amount(), raw.type(),
                     raw.category() == null ? ExpenseCategory.OTHER_UNCATEGORIZED : raw.category(), raw.selfTransfer());

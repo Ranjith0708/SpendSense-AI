@@ -22,10 +22,10 @@ public record AnalyzerProperties(
      * @param logPayloads log each chunk's prompt input and the model's raw/parsed output at INFO (otherwise DEBUG).
      *                    The payloads contain statement data, so switch off where logs are shared.
      */
-    public record Logging(@DefaultValue("true") boolean logPayloads) {}
+    public record Logging(@DefaultValue("false") boolean logPayloads) {}
 
     /**
-     * @param concurrency       chunks processed in parallel (1 = strictly sequential, best for a local model)
+     * @param concurrency       chunks processed in parallel (1 = strictly sequential)
      * @param maxAttempts       LLM attempts per call before the chunk is marked failed
      * @param minIntervalMs     minimum gap between the starts of two LLM calls (rate limit, 0 = off)
      * @param maxConcurrentJobs analysis jobs that may run at once

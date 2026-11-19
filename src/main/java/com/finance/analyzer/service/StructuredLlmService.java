@@ -6,19 +6,19 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.finance.analyzer.config.AnalyzerProperties;
 import com.finance.analyzer.exception.AiProcessingException;
 import com.finance.analyzer.llm.LlmClient;
-import com.finance.analyzer.llm.LlmClientFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Calls the active LLM and maps its JSON reply onto a Java type, with rate limiting, retries and logging.
- * Which provider is used is decided solely by {@link LlmClientFactory}.
+ * Calls OpenAI and maps its JSON reply onto a Java type, with rate limiting, retries and logging.
  */
 @Service
 @Slf4j
 public class StructuredLlmService {
 
-    private final LlmClientFactory factory;
+    private static final long RETRY_PAUSE_MS = 1000;
+
+    private final LlmClient client;
     private final int maxAttempts;
     private final RateLimiter rateLimiter;
     private final boolean logPayloads;
@@ -28,8 +28,8 @@ public class StructuredLlmService {
             .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
             .build();
 
-    public StructuredLlmService(LlmClientFactory factory, AnalyzerProperties props) {
-        this.factory = factory;
+    public StructuredLlmService(LlmClient client, AnalyzerProperties props) {
+        this.client = client;
         this.maxAttempts = Math.max(1, props.processing().maxAttempts());
         this.logPayloads = props.logging().logPayloads();
         this.rateLimiter = new RateLimiter(props.processing().minIntervalMs());
@@ -44,23 +44,36 @@ public class StructuredLlmService {
      * @param label short tag for logs, e.g. {@code chunk_3} or {@code narrative}
      */
     public <T> T call(String systemPrompt, String userPrompt, Class<T> type, String label) {
-        LlmClient client = factory.active();
+        return call(systemPrompt, userPrompt, type, label, maxAttempts, null, null);
+    }
+
+    /**
+     * Same as {@link #call(String, String, Class, String)} with per-call limits, for small replies that must not be
+     * allowed to run as long as a full chunk (e.g. the closing narrative).
+     *
+     * @param attempts        attempts for this call (capped by {@code analyzer.processing.max-attempts})
+     * @param maxOutputTokens reply-length cap for this call, or {@code null} for the configured default
+     * @param timeoutSeconds  time cap for this call, or {@code null} for the configured default
+     */
+    public <T> T call(String systemPrompt, String userPrompt, Class<T> type, String label,
+                      int attempts, Integer maxOutputTokens, Integer timeoutSeconds) {
         AiProcessingException last = null;
+        final int maxAttempts = Math.max(1, Math.min(attempts, this.maxAttempts));
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             long start = System.nanoTime();
             String stage = "request";
             String raw = null;
             try {
                 rateLimiter.acquire();
-                payload("llm_input label={} provider={} model={} attempt={}/{} promptChars={}\n{}",
-                        label, client.provider(), client.model(), attempt, maxAttempts, userPrompt.length(), userPrompt);
-                raw = client.completeJson(systemPrompt, userPrompt);
+                payload("llm_input label={} model={} attempt={}/{} promptChars={}\n{}",
+                        label, client.model(), attempt, maxAttempts, userPrompt.length(), userPrompt);
+                raw = client.completeJson(systemPrompt, userPrompt, maxOutputTokens, timeoutSeconds);
                 long ms = (System.nanoTime() - start) / 1_000_000;
                 payload("llm_raw_output label={} attempt={} durationMs={}\n{}", label, attempt, ms, raw);
                 stage = "parse";
                 T parsed = mapper.readValue(extractJson(raw), type);
                 if (parsed == null) throw new IllegalStateException("model returned null JSON");
-                log.info("llm_call_ok label={} provider={} attempt={} durationMs={}", label, client.provider(), attempt, ms);
+                log.info("llm_call_ok label={} attempt={} durationMs={}", label, attempt, ms);
                 return parsed;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -77,9 +90,20 @@ public class StructuredLlmService {
                         (System.nanoTime() - start) / 1_000_000, detail, e);
                 if (raw != null) log.warn("llm_unparseable_output label={} attempt={}\n{}", label, attempt, raw);
             }
+            if (attempt < maxAttempts) pause(attempt);
         }
         throw new AiProcessingException("The AI service could not process " + label + " after " + maxAttempts
                 + " attempts. " + (last == null ? "" : last.getMessage()), last);
+    }
+
+    /** Short growing pause before a retry, so a rate-limited or briefly unavailable API gets a moment to recover. */
+    private static void pause(int attempt) {
+        try {
+            Thread.sleep(RETRY_PAUSE_MS * attempt);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AiProcessingException("Analysis was interrupted.", e);
+        }
     }
 
     /** Models sometimes wrap JSON in code fences or add prose; keep only the outermost object. */

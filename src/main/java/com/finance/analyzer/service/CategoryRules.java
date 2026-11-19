@@ -8,7 +8,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * Deterministic category corrections applied after the model. Small local models regularly mislabel obvious merchants
+ * Deterministic category corrections applied after the model. Language models occasionally mislabel obvious merchants
  * (a Razorpay credit as "Utilities", a metro fare as "Health"), and a fixed keyword list is both faster and more
  * reliable for those. Anything not matched keeps the model's category.
  */

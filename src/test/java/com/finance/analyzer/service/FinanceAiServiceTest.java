@@ -9,8 +9,6 @@ import com.finance.analyzer.dto.ProgressEvent;
 import com.finance.analyzer.dto.StatementChunk;
 import com.finance.analyzer.exception.AiProcessingException;
 import com.finance.analyzer.llm.LlmClient;
-import com.finance.analyzer.llm.LlmClientFactory;
-import com.finance.analyzer.llm.LlmProvider;
 import com.finance.analyzer.model.ExpenseCategory;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,11 +24,10 @@ class FinanceAiServiceTest {
     /** Answers chunk prompts with one SWIGGY debit per statement line, and the commentary prompt with {@code narrative}. */
     private static FinanceAiService service(String narrative) {
         LlmClient client = new LlmClient() {
-            public LlmProvider provider() { return LlmProvider.LOCAL; }
             public String model() { return "scripted"; }
             public String completeJson(String system, String user) {
                 if (system.contains("personal-finance coach")) return narrative;
-                if (user.contains("FAIL")) throw new AiProcessingException("Ollama did not finish within 600s (model 'llama3.2:1b')", null);
+                if (user.contains("FAIL")) throw new AiProcessingException("OpenAI request failed (model 'gpt-4o-mini'): no reply within 600s", null);
                 StringBuilder sb = new StringBuilder("{\"transactions\":[");
                 int n = 0;
                 for (String line : user.split("\n")) {
@@ -43,11 +40,7 @@ class FinanceAiServiceTest {
                 return sb.append("]}").toString();
             }
         };
-        LlmProperties lp = new LlmProperties("local", 30, new LlmProperties.Endpoint("http://x", "", "m", null, null, null),
-                new LlmProperties.Endpoint("http://y", "", "m", null, null, null));
-        LlmClientFactory factory = new LlmClientFactory(List.of(client), lp);
-        factory.init();
-        StructuredLlmService llm = new StructuredLlmService(factory, PROPS);
+        StructuredLlmService llm = new StructuredLlmService(client, PROPS);
         return new FinanceAiService(new ChunkProcessor(llm, PROPS), llm, PROPS);
     }
 
@@ -96,7 +89,7 @@ class FinanceAiServiceTest {
         assertEquals(1, r.warnings().size());
         String w = r.warnings().get(0);
         assertTrue(w.contains("could not be analyzed"), w);
-        assertFalse(w.toLowerCase().contains("chunk") || w.contains("Ollama") || w.contains("600") || w.contains("llama"), w);
+        assertFalse(w.toLowerCase().contains("chunk") || w.contains("OpenAI") || w.contains("600") || w.contains("gpt"), w);
     }
 
     @Test void whenEverythingFailsTheMessageIsGeneric() {
@@ -108,6 +101,6 @@ class FinanceAiServiceTest {
     @Test void summaryFallbackWarningIsPlainLanguage() {
         AnalysisResponse r = service("not json").analyze("t6", chunks(), null);
         assertEquals(1, r.warnings().size());
-        assertFalse(r.warnings().get(0).contains("Ollama") || r.warnings().get(0).contains("attempt"));
+        assertFalse(r.warnings().get(0).contains("OpenAI") || r.warnings().get(0).contains("attempt"));
     }
 }
